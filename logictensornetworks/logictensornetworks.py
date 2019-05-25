@@ -60,28 +60,6 @@ class Predicate:
         result = tf.sigmoid(gX, name=app_label)
         return result
 
-
-    def predicatef(self):
-        global BIAS
-
-        pars = self.pars
-
-        def pred(*args):
-            global BIAS
-            crossed_args, list_of_args_in_crossed_args = cross_args(args)
-            result = self.pred_definition(*list_of_args_in_crossed_args)
-            if crossed_args.doms != []:
-                result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1], [1]], axis=0))
-            else:
-                result = tf.reshape(result, (1,))
-            result.doms = crossed_args.doms
-            BIAS = tf.divide(BIAS + .5 - tf.reduce_mean(result), 2) * BIAS_factor
-            return result
-
-        pred.pars = pars
-        pred.label = self.label
-        return pred
-
     def pred(self, *args):
 
         global BIAS
