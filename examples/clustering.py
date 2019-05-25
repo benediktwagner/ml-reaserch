@@ -82,8 +82,8 @@ distant_x_y = ltn.variable("distant_x_y",distant_data)
 
 C = {i:ltn.Predicate("C_"+str(i),x).ground for i in clst_ids}
 
-first = ltn.function("first",closed_x_y,fun_definition=lambda d:d[:,:2])
-second = ltn.function("second",closed_x_y,fun_definition=lambda d:d[:,2:])
+first = ltn.Function("first",closed_x_y,fun_definition=lambda d:d[:,:2]).ground
+second = ltn.Function("second",closed_x_y,fun_definition=lambda d:d[:,2:]).ground
 
 print("defining the theory T")
 T = tf.reduce_mean(tf.concat(
