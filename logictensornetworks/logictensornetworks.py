@@ -18,24 +18,28 @@ class Predicate:
     def __init__(self, label, number_of_features_or_vars, pred_definition = None):
         self.label = label
         self.number_of_features_or_vars = number_of_features_or_vars
+        self.n_features = self._obtain_n_features(number_of_features_or_vars)
         self.pred_definition = pred_definition
         self.predicate = self.predicate(label, number_of_features_or_vars, pred_definition)
 
+    def _obtain_n_features(self, number_of_features_or_vars):
+        if type(number_of_features_or_vars) is list:
+            return sum([int(v.shape[1]) for v in number_of_features_or_vars])
+        elif type(number_of_features_or_vars) is tf.Tensor:
+            return int(number_of_features_or_vars.shape[1])
+        else:
+            return number_of_features_or_vars
+
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
-        if type(number_of_features_or_vars) is list:
-            number_of_features = sum([int(v.shape[1]) for v in number_of_features_or_vars])
-        elif type(number_of_features_or_vars) is tf.Tensor:
-            number_of_features = int(number_of_features_or_vars.shape[1])
-        else:
-            number_of_features = number_of_features_or_vars
+
         if pred_definition is None:
             W = tf.matrix_band_part(
                 tf.Variable(
                     tf.random_normal(
                         [LAYERS,
-                         number_of_features + 1,
-                         number_of_features + 1], mean=0, stddev=1), name="W" + label), 0, -1)
+                         self.n_features + 1,
+                         self.n_features + 1], mean=0, stddev=1), name="W" + label), 0, -1)
             u = tf.Variable(tf.ones([LAYERS, 1]),
                             name="u" + label)
 
