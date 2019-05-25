@@ -66,15 +66,12 @@ class Predicate:
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
 
-        def apply_pred(*args):
-            return pred_definition(*args)
-
         pars = self.pars
 
         def pred(*args):
             global BIAS
             crossed_args, list_of_args_in_crossed_args = cross_args(args)
-            result = apply_pred(*list_of_args_in_crossed_args)
+            result = self.pred_definition(*list_of_args_in_crossed_args)
             if crossed_args.doms != []:
                 result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1], [1]], axis=0))
             else:
