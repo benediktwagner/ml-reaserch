@@ -30,6 +30,42 @@ class Predicate:
         else:
             return number_of_features_or_vars
 
+    def _default_grounding_definition(self, *args):
+        """
+        This method represents the default predicate definition
+        By default, grounding is implemented by a generalised form of a Neural Tensor Network
+
+        Richard Socher, Danqi Chen, Christopher D. Manning, and Andrew Y. Ng. Reasoning With
+        Neural Tensor Networks For Knowledge Base Completion. In Advances in Neural Informa-
+        tion Processing Systems 26. 2013.
+        """
+        with tf.variable_scope('', reuse=tf.AUTO_REUSE): #hack: global scope
+
+            W = tf.matrix_band_part(
+                    tf.get_variable(
+                    name = "W" + self.label,
+                    shape=[LAYERS,
+                         self.n_features + 1,
+                         self.n_features + 1],
+                    initializer=tf.initializers.random_normal(mean=0, stddev=1)
+                ), 0, -1)
+
+            u = tf.get_variable(
+                name="u" + self.label,
+                shape=[LAYERS, 1],
+                initializer = tf.keras.initializers.Ones
+            )
+
+            app_label = self.label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
+            tensor_args = tf.concat(args, axis=1)
+            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                           tensor_args], 1)
+            XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
+            XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
+            gX = tf.matmul(tf.tanh(XWX), u)
+            result = tf.sigmoid(gX, name=app_label)
+            return result
+
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
 
