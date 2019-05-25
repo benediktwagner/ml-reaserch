@@ -39,6 +39,12 @@ class Predicate:
             return number_of_features_or_vars
 
     def _get_w_u_variables(self):
+        """
+        Default tensor shapes for use with _default_pred_definition
+        For more details on these matrices, please see the method description for
+        Predicate._default_pred_definition
+        :return:
+        """
         W = tf.matrix_band_part(
             tf.Variable(
                 tf.random_normal(
@@ -50,6 +56,27 @@ class Predicate:
         return [W, u]
 
     def _default_pred_definition(self, *args):
+        """
+        Default predicate definition.
+
+        Serafini, Luciano, and Artur d’Avila Garcez. “Logic Tensor Networks: Deep Learning and Logical Reasoning from Data and Knowledge.” ArXiv:1606.04422 [Cs], June 14, 2016. http://arxiv.org/abs/1606.04422.
+
+        "the grounding of the m-ary predicate P, G(P), is defined as a generalisation of the
+        Neural Tensor Network [26] ... as a function from R^mn to [0,1] as follows:
+        
+        G(P) = sigmoid( u_P^T * tanh(v^T.W^[1:k]_P.v + V_P.v + B_p) )
+
+        where W^[1:k]_P is a 3D tensor in R^mn*mn*k, V_P is a matrix in R^k*mn,
+         and B_P is vector in R^k.
+
+         With this encoding, the grounding (ie truth value, for predicates) of a clause can be determnined by
+         a neural network which first computes the grounding of the literals contained in the clause,
+         and then combines them using a specific s-norm.
+
+        """
+
+        # todo: find out why the bias is missing from this formula (compared to the paper)
+
         app_label = self.label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
         tensor_args = tf.concat(args, axis=1)
         X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
