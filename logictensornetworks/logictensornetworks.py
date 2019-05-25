@@ -30,8 +30,6 @@ class Predicate:
         else:
             self.pred_definition = pred_definition
 
-        self.predicate = self.predicate(label, number_of_features_or_vars, self.pred_definition)
-
     def _obtain_n_features(self, number_of_features_or_vars):
         if type(number_of_features_or_vars) is list:
             return sum([int(v.shape[1]) for v in number_of_features_or_vars])
@@ -63,7 +61,7 @@ class Predicate:
         return result
 
 
-    def predicate(self, label, number_of_features_or_vars, pred_definition=None):
+    def predicatef(self):
         global BIAS
 
         pars = self.pars
@@ -81,11 +79,31 @@ class Predicate:
             return result
 
         pred.pars = pars
-        pred.label = label
+        pred.label = self.label
         return pred
 
     def pred(self, *args):
-        return self.predicate(*args)
+
+        global BIAS
+
+        pars = self.pars
+
+        def predi(*args):
+            global BIAS
+            crossed_args, list_of_args_in_crossed_args = cross_args(args)
+            result = self.pred_definition(*list_of_args_in_crossed_args)
+            if crossed_args.doms != []:
+                result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1], [1]], axis=0))
+            else:
+                result = tf.reshape(result, (1,))
+            result.doms = crossed_args.doms
+            BIAS = tf.divide(BIAS + .5 - tf.reduce_mean(result), 2) * BIAS_factor
+            return result
+
+        predi.pars = pars
+        predi.label = self.label
+
+        return predi(*args)
 
 
 def set_tnorm(tnorm):
