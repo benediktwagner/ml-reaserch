@@ -19,8 +19,9 @@ class Predicate:
         self.label = label
         self.number_of_features_or_vars = number_of_features_or_vars
         self.n_features = self._obtain_n_features(number_of_features_or_vars)
-        # self.pred_definition = pred_definition
-        self.pred_definition = self._default_grounding_definition
+        self.pars = []
+        self.pred_definition = pred_definition
+        # self.pred_definition = self._default_grounding_definition
         self.predicate = self.predicate(label, number_of_features_or_vars, self.pred_definition)
 
     def _obtain_n_features(self, number_of_features_or_vars):
@@ -30,36 +31,6 @@ class Predicate:
             return int(number_of_features_or_vars.shape[1])
         else:
             return number_of_features_or_vars
-
-    def _default_grounding_definition(self, *args):
-        """
-        This method represents the default predicate definition
-        By default, grounding is implemented by a generalised form of a Neural Tensor Network
-
-        Richard Socher, Danqi Chen, Christopher D. Manning, and Andrew Y. Ng. Reasoning With
-        Neural Tensor Networks For Knowledge Base Completion. In Advances in Neural Informa-
-        tion Processing Systems 26. 2013.
-        """
-        with tf.variable_scope('', reuse=tf.AUTO_REUSE): #hack: global scope
-
-            W = tf.matrix_band_part(
-                tf.Variable(
-                    tf.random_normal(
-                        [LAYERS,
-                         self.n_features + 1,
-                         self.n_features + 1], mean=0, stddev=1), name="W" + self.label), 0, -1)
-            u = tf.Variable(tf.ones([LAYERS, 1]),
-                            name="u" + self.label)
-
-            app_label = self.label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
-            tensor_args = tf.concat(args, axis=1)
-            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
-                           tensor_args], 1)
-            XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
-            XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
-            gX = tf.matmul(tf.tanh(XWX), u)
-            result = tf.sigmoid(gX, name=app_label)
-            return result
 
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
