@@ -89,12 +89,12 @@ class Predicate:
 
     def pred(self, *args):
 
-        global BIAS
+        # global BIAS
 
         pars = self.pars
 
         def predi(*args):
-            global BIAS
+            # global BIAS
             crossed_args, list_of_args_in_crossed_args = cross_args(args)
             result = self.pred_definition(*list_of_args_in_crossed_args)
             if crossed_args.doms != []:
@@ -102,7 +102,8 @@ class Predicate:
             else:
                 result = tf.reshape(result, (1,))
             result.doms = crossed_args.doms
-            BIAS = tf.divide(BIAS + .5 - tf.reduce_mean(result), 2) * BIAS_factor
+            BIAS = get_bias()
+            update_bias(tf.divide(BIAS + .5 - tf.reduce_mean(result), 2) * BIAS_factor)
             return result
 
         predi.pars = pars
@@ -352,7 +353,7 @@ def proposition(label,initial_value=None,value=None):
     return result
 
 def predicate(label,number_of_features_or_vars,pred_definition=None):
-    global BIAS
+    # global BIAS
     if type(number_of_features_or_vars) is list:
         number_of_features = sum([int(v.shape[1]) for v in number_of_features_or_vars])
     elif type(number_of_features_or_vars) is tf.Tensor:
@@ -385,7 +386,7 @@ def predicate(label,number_of_features_or_vars,pred_definition=None):
         pars = []
 
     def pred(*args):
-        global BIAS
+        # global BIAS
         crossed_args, list_of_args_in_crossed_args = cross_args(args)
         result = apply_pred(*list_of_args_in_crossed_args)
         if crossed_args.doms != []:
@@ -393,7 +394,8 @@ def predicate(label,number_of_features_or_vars,pred_definition=None):
         else:
             result = tf.reshape(result, (1,))
         result.doms = crossed_args.doms
-        BIAS = tf.divide(BIAS + .5 - tf.reduce_mean(result),2)*BIAS_factor
+        BIAS = get_bias()
+        update_bias(tf.divide(BIAS + .5 - tf.reduce_mean(result),2)*BIAS_factor)
         return result
     pred.pars = pars
     pred.label=label
@@ -443,3 +445,17 @@ def cross_2args(X,Y):
     result.doms = eX_doms
     return result,[result1,result2]
 
+
+def get_bias():
+    global BIAS
+    return BIAS
+
+def update_bias(new_value):
+    global BIAS
+    BIAS = new_value
+    return BIAS
+
+def update_bias_factor(new_value):
+    global BIAS_factor
+    BIAS_factor = new_value
+    return BIAS_factor
