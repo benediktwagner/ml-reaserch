@@ -19,7 +19,59 @@ class Predicate:
         self.label = label
         self.number_of_features_or_vars = number_of_features_or_vars
         self.pred_definition = pred_definition
-        self.predicate = predicate(label, number_of_features_or_vars, pred_definition)
+        self.predicate = self.predicate(label, number_of_features_or_vars, pred_definition)
+
+    def predicate(self, label, number_of_features_or_vars, pred_definition=None):
+        global BIAS
+        if type(number_of_features_or_vars) is list:
+            number_of_features = sum([int(v.shape[1]) for v in number_of_features_or_vars])
+        elif type(number_of_features_or_vars) is tf.Tensor:
+            number_of_features = int(number_of_features_or_vars.shape[1])
+        else:
+            number_of_features = number_of_features_or_vars
+        if pred_definition is None:
+            W = tf.matrix_band_part(
+                tf.Variable(
+                    tf.random_normal(
+                        [LAYERS,
+                         number_of_features + 1,
+                         number_of_features + 1], mean=0, stddev=1), name="W" + label), 0, -1)
+            u = tf.Variable(tf.ones([LAYERS, 1]),
+                            name="u" + label)
+
+            def apply_pred(*args):
+                app_label = label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
+                tensor_args = tf.concat(args, axis=1)
+                X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                               tensor_args], 1)
+                XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
+                XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
+                gX = tf.matmul(tf.tanh(XWX), u)
+                result = tf.sigmoid(gX, name=app_label)
+                return result
+
+            pars = [W, u]
+        else:
+            def apply_pred(*args):
+                return pred_definition(*args)
+
+            pars = []
+
+        def pred(*args):
+            global BIAS
+            crossed_args, list_of_args_in_crossed_args = cross_args(args)
+            result = apply_pred(*list_of_args_in_crossed_args)
+            if crossed_args.doms != []:
+                result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1], [1]], axis=0))
+            else:
+                result = tf.reshape(result, (1,))
+            result.doms = crossed_args.doms
+            BIAS = tf.divide(BIAS + .5 - tf.reduce_mean(result), 2) * BIAS_factor
+            return result
+
+        pred.pars = pars
+        pred.label = label
+        return pred
 
     def pred(self, *args):
         return self.predicate(*args)
