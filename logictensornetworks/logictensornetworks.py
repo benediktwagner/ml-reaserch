@@ -15,20 +15,20 @@ F_Exists = None
 
 class Predicate:
 
-    def __init__(self, label, number_of_features_or_vars, pred_definition = None):
+    def __init__(self, label, number_of_features_or_vars, grounding_definition = None):
         self.label = label
         self.number_of_features_or_vars = number_of_features_or_vars
         self.n_features = self._obtain_n_features(number_of_features_or_vars)
 
-        if pred_definition is None:
+        if grounding_definition is None:
             # if no function is supplied for predicate definition, then
             # set up default variables for Neural Tensor Machines (W, u) and
             # define a function to run the machine (_default_pred_definition)
-            self.W, self.u = self._get_w_u_variables()
+            self.W, self.u = self._declare_tensors_for_default_grounding()
+            self.grounding_definition = self._default_grounding_definition
             self.pars = [self.W, self.u]
-            self.pred_definition = self._default_pred_definition
         else:
-            self.pred_definition = pred_definition
+            self.grounding_definition = grounding_definition
             self.pars = []
 
     def _obtain_n_features(self, number_of_features_or_vars):
@@ -39,7 +39,7 @@ class Predicate:
         else:
             return number_of_features_or_vars
 
-    def _get_w_u_variables(self):
+    def _declare_tensors_for_default_grounding(self):
         """
         Default tensor shapes for use with _default_pred_definition
         For more details on these matrices, please see the method description for
@@ -56,7 +56,7 @@ class Predicate:
                         name="u" + self.label)
         return [W, u]
 
-    def _default_pred_definition(self, *args):
+    def _default_grounding_definition(self, *args):
         """
         Default predicate definition.
 
@@ -97,7 +97,7 @@ class Predicate:
         def predi(*args):
             # global BIAS
             crossed_args, list_of_args_in_crossed_args = cross_args(args)
-            result = self.pred_definition(*list_of_args_in_crossed_args)
+            result = self.grounding_definition(*list_of_args_in_crossed_args)
             if crossed_args.doms != []:
                 result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1], [1]], axis=0))
             else:
