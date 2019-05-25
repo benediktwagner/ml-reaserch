@@ -1,4 +1,7 @@
 import random
+
+import logictensornetworks.operators
+
 random.seed(1337)
 
 import numpy as np
@@ -9,12 +12,12 @@ tf.set_random_seed(1)
 
 
 import logictensornetworks as ltn
-ltn.set_universal_aggreg("min")
-ltn.set_existential_aggregator("max")
-ltn.set_tnorm("prod")
+logictensornetworks.operators.set_universal_aggreg("min")
+logictensornetworks.operators.set_existential_aggregator("max")
+logictensornetworks.operators.set_tnorm("prod")
 ltn.LAYERS = 4
 
-from logictensornetworks import And,Not,Or,Forall,Exists,Implies,Equiv
+from logictensornetworks.operators import And, Or, Implies, Not, Equiv, Forall, Exists
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt

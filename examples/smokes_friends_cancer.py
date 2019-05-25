@@ -1,4 +1,7 @@
 import random
+
+import logictensornetworks.operators
+
 random.seed(1337)
 
 import numpy as np
@@ -13,7 +16,7 @@ import tensorflow as tf
 import numpy as np
 import logictensornetworks as ltn
 import matplotlib.pyplot as plt
-from logictensornetworks import Not,And,Implies,Forall,Exists,Equiv
+from logictensornetworks.operators import And, Implies, Not, Equiv, Forall, Exists
 import pandas as pd
 pd.options.display.max_rows = 999
 pd.options.display.max_columns = 999
@@ -32,7 +35,8 @@ pd.set_option('precision',2)
 
 ltn.LAYERS = 4
 ltn.update_bias_factor(1e-7)
-ltn.set_universal_aggreg("mean")
+
+logictensornetworks.operators.set_universal_aggreg("mean")
 
 size = 20
 g1 = {l:ltn.constant(l,min_value=[0.]*size,max_value=[1.]*size) for l in 'abcdefgh'}

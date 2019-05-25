@@ -2,7 +2,7 @@ import tensorflow as tf
 import logictensornetworks as ltn
 import numpy as np
 from numpy.random import choice as random
-from logictensornetworks import Forall,Exists, Equiv, Implies, And, Or, Not
+from logictensornetworks.operators import And, Or, Implies, Not, Equiv, Forall, Exists
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import itertools
