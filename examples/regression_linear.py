@@ -36,7 +36,12 @@ def apply_fun(X):
 c_x=[ltn.Constant("x_%s" % i,[x]).ground for i,x in enumerate(train_X)]
 c_y=[ltn.Constant("y_%s" % i,[y]).ground for i,y in enumerate(train_Y)]
 
-f=ltn.Function("f",1,1,fun_definition=apply_fun).ground
+f=ltn.Function( # this function is estimating the linear regression f(x), ie mapping x to y
+    label="f",
+    input_shape_spec=1,
+    output_shape_spec=1,
+    fun_definition=apply_fun).ground
+
 eq=ltn.Predicate("equal",2,lambda x,y: ltnl.equal_euclidian(x,y)).ground
 
 facts=[eq(f(x),y) for x,y in zip(c_x,c_y)]
