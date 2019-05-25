@@ -94,7 +94,7 @@ class Predicate:
 
         pars = self.pars
 
-        def predi(*args):
+        def predicate_grounding(*args):
             # global BIAS
             crossed_args, list_of_args_in_crossed_args = cross_args(args)
             result = self.grounding_definition(*list_of_args_in_crossed_args)
@@ -107,10 +107,10 @@ class Predicate:
             update_bias(tf.divide(BIAS + .5 - tf.reduce_mean(result), 2) * BIAS_factor)
             return result
 
-        predi.pars = pars
-        predi.label = self.label
+        predicate_grounding.pars = pars
+        predicate_grounding.label = self.label
 
-        return predi(*args)
+        return predicate_grounding(*args)
 
 
 class Function:
@@ -152,7 +152,7 @@ class Function:
         return result
 
     def ground(self, *args):
-        def fun(*args):
+        def function_grounding(*args):
             crossed_args, list_of_args_in_crossed_args = cross_args(args)
             result = self.func_definition(*list_of_args_in_crossed_args)
             if crossed_args.doms != []:
@@ -163,9 +163,9 @@ class Function:
             result.doms = crossed_args.doms
             return result
 
-        fun.pars = self.pars
-        fun.label = self.label
-        return fun(*args)
+        function_grounding.pars = self.pars
+        function_grounding.label = self.label
+        return function_grounding(*args)
 
 
 def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
