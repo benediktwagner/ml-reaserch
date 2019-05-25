@@ -43,24 +43,29 @@ class Predicate:
                         name="u" + self.label)
         return [W, u]
 
+    def _default_pred_definition(self, W, u, *args):
+        app_label = self.label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
+        tensor_args = tf.concat(args, axis=1)
+        X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                       tensor_args], 1)
+        XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
+        XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
+        gX = tf.matmul(tf.tanh(XWX), u)
+        result = tf.sigmoid(gX, name=app_label)
+        return result
+
+
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
 
         if pred_definition is None:
             W, u = self._get_w_u_variables()
+            self.pars = [W,u]
 
             def apply_pred(*args):
-                app_label = label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
-                tensor_args = tf.concat(args, axis=1)
-                X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
-                               tensor_args], 1)
-                XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
-                XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
-                gX = tf.matmul(tf.tanh(XWX), u)
-                result = tf.sigmoid(gX, name=app_label)
-                return result
+                return self._default_pred_definition(W, u, *args)
 
-            pars = [W, u]
+            pars = self.pars
         else:
             def apply_pred(*args):
                 return pred_definition(*args)
