@@ -13,6 +13,18 @@ F_Not = None
 F_Forall = None
 F_Exists = None
 
+class Predicate:
+
+    def __init__(self, label, number_of_features_or_vars, pred_definition = None):
+        self.label = label
+        self.number_of_features_or_vars = number_of_features_or_vars
+        self.pred_definition = pred_definition
+        self.predicate = predicate(label, number_of_features_or_vars, pred_definition)
+
+    def pred(self, *args):
+        return self.predicate(*args)
+
+
 def set_tnorm(tnorm):
     assert tnorm in ['min','luk','prod','mean','']
     global F_And,F_Or,F_Implies,F_Not,F_Equiv,F_Forall

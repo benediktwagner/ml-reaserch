@@ -77,7 +77,7 @@ closed_x_y = ltn.variable("closed_x_y",closed_data)
 distant_x_y = ltn.variable("distant_x_y",distant_data)
 
 
-C = {i:ltn.predicate("C_"+str(i),x) for i in clst_ids}
+C = {i:ltn.Predicate("C_"+str(i),x).pred for i in clst_ids}
 
 first = ltn.function("first",closed_x_y,fun_definition=lambda d:d[:,:2])
 second = ltn.function("second",closed_x_y,fun_definition=lambda d:d[:,2:])
