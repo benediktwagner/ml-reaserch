@@ -1,3 +1,13 @@
+import random
+random.seed(1337)
+
+import numpy as np
+np.random.seed(1337)  # for reproducibility
+
+import tensorflow as tf
+tf.set_random_seed(1)
+
+
 import logictensornetworks as ltn
 ltn.set_universal_aggreg("min")
 ltn.set_existential_aggregator("max")
