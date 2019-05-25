@@ -20,8 +20,16 @@ class Predicate:
         self.number_of_features_or_vars = number_of_features_or_vars
         self.n_features = self._obtain_n_features(number_of_features_or_vars)
         self.pars = []
-        self.pred_definition = pred_definition
-        # self.pred_definition = self._default_grounding_definition
+
+        if pred_definition is None:
+            # if no function is supplied for predicate definition, then
+            # set up default variables for Neural Tensor Machines (W, u) and
+            # define a function to run the machine (_default_pred_definition)
+            self.W, self.u = self._get_w_u_variables()
+            self.pred_definition = self._default_pred_definition
+        else:
+            self.pred_definition = pred_definition
+
         self.predicate = self.predicate(label, number_of_features_or_vars, self.pred_definition)
 
     def _obtain_n_features(self, number_of_features_or_vars):
@@ -43,14 +51,14 @@ class Predicate:
                         name="u" + self.label)
         return [W, u]
 
-    def _default_pred_definition(self, W, u, *args):
+    def _default_pred_definition(self, *args):
         app_label = self.label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
         tensor_args = tf.concat(args, axis=1)
         X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
                        tensor_args], 1)
-        XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
+        XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), self.W)
         XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
-        gX = tf.matmul(tf.tanh(XWX), u)
+        gX = tf.matmul(tf.tanh(XWX), self.u)
         result = tf.sigmoid(gX, name=app_label)
         return result
 
@@ -59,11 +67,11 @@ class Predicate:
         global BIAS
 
         if pred_definition is None:
-            W, u = self._get_w_u_variables()
-            self.pars = [W,u]
+            # W, u = self._get_w_u_variables()
+            self.pars = [self.W, self.u]
 
             def apply_pred(*args):
-                return self._default_pred_definition(W, u, *args)
+                return self._default_pred_definition(*args)
 
             pars = self.pars
         else:
