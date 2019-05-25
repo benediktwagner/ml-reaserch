@@ -19,8 +19,9 @@ class Predicate:
         self.label = label
         self.number_of_features_or_vars = number_of_features_or_vars
         self.n_features = self._obtain_n_features(number_of_features_or_vars)
-        self.pred_definition = pred_definition
-        self.predicate = self.predicate(label, number_of_features_or_vars, pred_definition)
+        # self.pred_definition = pred_definition
+        self.pred_definition = self._default_grounding_definition
+        self.predicate = self.predicate(label, number_of_features_or_vars, self.pred_definition)
 
     def _obtain_n_features(self, number_of_features_or_vars):
         if type(number_of_features_or_vars) is list:
