@@ -19,16 +19,17 @@ class Predicate:
         self.label = label
         self.number_of_features_or_vars = number_of_features_or_vars
         self.n_features = self._obtain_n_features(number_of_features_or_vars)
-        self.pars = []
 
         if pred_definition is None:
             # if no function is supplied for predicate definition, then
             # set up default variables for Neural Tensor Machines (W, u) and
             # define a function to run the machine (_default_pred_definition)
             self.W, self.u = self._get_w_u_variables()
+            self.pars = [self.W, self.u]
             self.pred_definition = self._default_pred_definition
         else:
             self.pred_definition = pred_definition
+            self.pars = []
 
     def _obtain_n_features(self, number_of_features_or_vars):
         if type(number_of_features_or_vars) is list:
@@ -87,7 +88,7 @@ class Predicate:
         result = tf.sigmoid(gX, name=app_label)
         return result
 
-    def pred(self, *args):
+    def ground(self, *args):
 
         # global BIAS
 
@@ -111,6 +112,98 @@ class Predicate:
 
         return predi(*args)
 
+
+class Function:
+
+    def __init__(self, label, input_shape_spec, output_shape_spec=1,fun_definition=None):
+        self.label = label
+        self.input_shape_spec = input_shape_spec
+        self.n_features = self._obtain_n_features(input_shape_spec)
+        self.output_shape_spec = output_shape_spec
+        if fun_definition is None:
+            self.W = self._get_w_variable()
+            self.func_definition = self._default_func_definition
+            self.pars = [self.W]
+        else:
+            self.func_definition = fun_definition
+            self.pars = []
+
+    def _obtain_n_features(self, input_shape_spec):
+        if type(input_shape_spec) is list:
+            return sum([int(v.shape[1]) for v in input_shape_spec])
+        elif type(input_shape_spec) is tf.Tensor:
+            return int(input_shape_spec.shape[1])
+        else:
+            return input_shape_spec
+
+    def _get_w_variable(self):
+        W = tf.Variable(
+                tf.random_normal(
+                    [self.n_features + 1,self.output_shape_spec],
+                    mean=0,stddev=1
+                ), name="W" + self.label)
+        return W
+
+    def _default_func_definition(self, *args):
+        tensor_args = tf.concat(args, axis=1)
+        X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                       tensor_args], 1)
+        result = tf.matmul(X, self.W)
+        return result
+
+    def ground(self, *args):
+        def fun(*args):
+            crossed_args, list_of_args_in_crossed_args = cross_args(args)
+            result = self.func_definition(*list_of_args_in_crossed_args)
+            if crossed_args.doms != []:
+                result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],
+                                                       tf.shape(result)[-1:]], axis=0))
+            else:
+                result = tf.reshape(result, (self.output_shape_spec,))
+            result.doms = crossed_args.doms
+            return result
+
+        fun.pars = self.pars
+        fun.label = self.label
+        return fun(*args)
+
+
+def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
+    if type(input_shape_spec) is list:
+        number_of_features = sum([int(v.shape[1]) for v in input_shape_spec])
+    elif type(input_shape_spec) is tf.Tensor:
+        number_of_features = int(input_shape_spec.shape[1])
+    else:
+        number_of_features = input_shape_spec
+    if fun_definition is None:
+        W = tf.Variable(
+                tf.random_normal(
+                    [number_of_features + 1,output_shape_spec],mean=0,stddev=1), name="W" + label)
+        def apply_fun(*args):
+            tensor_args = tf.concat(args,axis=1)
+            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                           tensor_args], 1)
+            result = tf.matmul(X,W)
+            return result
+        pars = [W]
+    else:
+        def apply_fun(*args):
+            return fun_definition(*args)
+        pars = []
+
+    def fun(*args):
+        crossed_args, list_of_args_in_crossed_args = cross_args(args)
+        result = apply_fun(*list_of_args_in_crossed_args)
+        if crossed_args.doms != []:
+            result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],
+                                                   tf.shape(result)[-1:]],axis=0))
+        else:
+            result = tf.reshape(result, (output_shape_spec,))
+        result.doms = crossed_args.doms
+        return result
+    fun.pars = pars
+    fun.label=label
+    return fun
 
 def set_tnorm(tnorm):
     assert tnorm in ['min','luk','prod','mean','']
@@ -303,42 +396,7 @@ def constant(label,value=None,
     result.doms = []
     return result
 
-def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
-    if type(input_shape_spec) is list:
-        number_of_features = sum([int(v.shape[1]) for v in input_shape_spec])
-    elif type(input_shape_spec) is tf.Tensor:
-        number_of_features = int(input_shape_spec.shape[1])
-    else:
-        number_of_features = input_shape_spec
-    if fun_definition is None:
-        W = tf.Variable(
-                tf.random_normal(
-                    [number_of_features + 1,output_shape_spec],mean=0,stddev=1), name="W" + label)
-        def apply_fun(*args):
-            tensor_args = tf.concat(args,axis=1)
-            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
-                           tensor_args], 1)
-            result = tf.matmul(X,W)
-            return result
-        pars = [W]
-    else:
-        def apply_fun(*args):
-            return fun_definition(*args)
-        pars = []
 
-    def fun(*args):
-        crossed_args, list_of_args_in_crossed_args = cross_args(args)
-        result = apply_fun(*list_of_args_in_crossed_args)
-        if crossed_args.doms != []:
-            result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],
-                                                   tf.shape(result)[-1:]],axis=0))
-        else:
-            result = tf.reshape(result, (output_shape_spec,))
-        result.doms = crossed_args.doms
-        return result
-    fun.pars = pars
-    fun.label=label
-    return fun
 
 def proposition(label,initial_value=None,value=None):
     if value is not None:

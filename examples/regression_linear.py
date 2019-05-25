@@ -36,8 +36,8 @@ def apply_fun(X):
 c_x=[ltn.constant("x_%s" % i,[x]) for i,x in enumerate(train_X)]
 c_y=[ltn.constant("y_%s" % i,[y]) for i,y in enumerate(train_Y)]
 
-f=ltn.function("f",1,1,fun_definition=apply_fun)
-eq=ltn.Predicate("equal",2,lambda x,y: ltnl.equal_euclidian(x,y)).pred
+f=ltn.Function("f",1,1,fun_definition=apply_fun).ground
+eq=ltn.Predicate("equal",2,lambda x,y: ltnl.equal_euclidian(x,y)).ground
 
 facts=[eq(f(x),y) for x,y in zip(c_x,c_y)]
 cost=-tf.reduce_mean(tf.stack(facts))

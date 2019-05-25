@@ -55,9 +55,9 @@ q1 = ltn.variable("q1",tf.concat(list(g1.values()),axis=0))
 p2 = ltn.variable("p2",tf.concat(list(g2.values()),axis=0))
 q2 = ltn.variable("q2",tf.concat(list(g2.values()),axis=0))
 
-Friends = ltn.Predicate('Friends',size*2).pred
-Smokes = ltn.Predicate('Smokes',size).pred
-Cancer = ltn.Predicate('Cancer',size).pred
+Friends = ltn.Predicate('Friends',size*2).ground
+Smokes = ltn.Predicate('Smokes',size).ground
+Cancer = ltn.Predicate('Cancer',size).ground
 
 
 facts = [Friends(g[x],g[y]) for (x,y) in friends]+\
