@@ -66,19 +66,10 @@ class Predicate:
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
 
-        if pred_definition is None:
-            # W, u = self._get_w_u_variables()
-            self.pars = [self.W, self.u]
+        def apply_pred(*args):
+            return pred_definition(*args)
 
-            def apply_pred(*args):
-                return self._default_pred_definition(*args)
-
-            pars = self.pars
-        else:
-            def apply_pred(*args):
-                return pred_definition(*args)
-
-            pars = []
+        pars = self.pars
 
         def pred(*args):
             global BIAS
