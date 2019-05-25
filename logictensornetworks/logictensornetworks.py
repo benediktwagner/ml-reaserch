@@ -32,18 +32,22 @@ class Predicate:
         else:
             return number_of_features_or_vars
 
+    def _get_w_u_variables(self):
+        W = tf.matrix_band_part(
+            tf.Variable(
+                tf.random_normal(
+                    [LAYERS,
+                     self.n_features + 1,
+                     self.n_features + 1], mean=0, stddev=1), name="W" + self.label), 0, -1)
+        u = tf.Variable(tf.ones([LAYERS, 1]),
+                        name="u" + self.label)
+        return [W, u]
+
     def predicate(self, label, number_of_features_or_vars, pred_definition=None):
         global BIAS
 
         if pred_definition is None:
-            W = tf.matrix_band_part(
-                tf.Variable(
-                    tf.random_normal(
-                        [LAYERS,
-                         self.n_features + 1,
-                         self.n_features + 1], mean=0, stddev=1), name="W" + label), 0, -1)
-            u = tf.Variable(tf.ones([LAYERS, 1]),
-                            name="u" + label)
+            W, u = self._get_w_u_variables()
 
             def apply_pred(*args):
                 app_label = label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
