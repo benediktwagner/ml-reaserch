@@ -43,19 +43,13 @@ class Predicate:
         with tf.variable_scope('', reuse=tf.AUTO_REUSE): #hack: global scope
 
             W = tf.matrix_band_part(
-                    tf.get_variable(
-                    name = "W" + self.label,
-                    shape=[LAYERS,
+                tf.Variable(
+                    tf.random_normal(
+                        [LAYERS,
                          self.n_features + 1,
-                         self.n_features + 1],
-                    initializer=tf.initializers.random_normal(mean=0, stddev=1)
-                ), 0, -1)
-
-            u = tf.get_variable(
-                name="u" + self.label,
-                shape=[LAYERS, 1],
-                initializer = tf.keras.initializers.Ones
-            )
+                         self.n_features + 1], mean=0, stddev=1), name="W" + self.label), 0, -1)
+            u = tf.Variable(tf.ones([LAYERS, 1]),
+                            name="u" + self.label)
 
             app_label = self.label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
             tensor_args = tf.concat(args, axis=1)
