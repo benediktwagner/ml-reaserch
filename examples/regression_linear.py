@@ -33,8 +33,8 @@ b = tf.Variable(np.random.randn(), name="bias")
 def apply_fun(X):
     return tf.add(tf.multiply(X, W), b)
 
-c_x=[ltn.constant("x_%s" % i,[x]) for i,x in enumerate(train_X)]
-c_y=[ltn.constant("y_%s" % i,[y]) for i,y in enumerate(train_Y)]
+c_x=[ltn.Constant("x_%s" % i,[x]).ground for i,x in enumerate(train_X)]
+c_y=[ltn.Constant("y_%s" % i,[y]).ground for i,y in enumerate(train_Y)]
 
 f=ltn.Function("f",1,1,fun_definition=apply_fun).ground
 eq=ltn.Predicate("equal",2,lambda x,y: ltnl.equal_euclidian(x,y)).ground

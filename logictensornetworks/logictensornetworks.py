@@ -168,6 +168,27 @@ class Function:
         return function_grounding(*args)
 
 
+class Constant:
+
+    def __init__(self, label, value=None, min_value=None, max_value=None):
+        self.label = label
+        self.value = value
+        self.min_value = min_value
+        self.max_value = max_value
+
+    @property
+    def ground(self):
+        label = "ltn_constant_" + self.label
+        if self.value is not None:
+            result = tf.constant(self.value, name=label)
+        else:
+            result = tf.Variable(tf.random_uniform(
+                shape=(1, len(self.min_value)),
+                minval=self.min_value,
+                maxval=self.max_value, name=label))
+        result.doms = []
+        return result
+
 def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
     if type(input_shape_spec) is list:
         number_of_features = sum([int(v.shape[1]) for v in input_shape_spec])
@@ -381,6 +402,10 @@ def variable(label,number_of_features_or_feed):
         result = tf.constant(number_of_features_or_feed,name=label)
     result.doms = [label]
     return result
+
+
+
+
 
 def constant(label,value=None,
                  min_value=None,
