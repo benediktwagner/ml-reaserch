@@ -39,8 +39,8 @@ ltn.update_bias_factor(1e-7)
 logictensornetworks.operators.set_universal_aggreg("mean")
 
 size = 20
-g1 = {l:ltn.constant(l,min_value=[0.]*size,max_value=[1.]*size) for l in 'abcdefgh'}
-g2 = {l:ltn.constant(l,min_value=[0.]*size,max_value=[1.]*size) for l in 'ijklmn'}
+g1 = {l:ltn.Constant(l,min_value=[0.]*size,max_value=[1.]*size).ground for l in 'abcdefgh'}
+g2 = {l:ltn.Constant(l,min_value=[0.]*size,max_value=[1.]*size).ground for l in 'ijklmn'}
 g = {**g1,**g2}
 
 

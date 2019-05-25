@@ -1,17 +1,11 @@
 #!/usr/bin/env python
 import tensorflow as tf
+from logictensornetworks.utils import cross_args
 
 LAYERS = 4
 BIAS_factor = 0.0
 BIAS = 0.0
 
-F_And = None
-F_Or = None
-F_Implies = None
-F_Equiv = None
-F_Not = None
-F_Forall = None
-F_Exists = None
 
 class Predicate:
 
@@ -183,44 +177,6 @@ class Constant:
         return result
 
 
-def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
-    if type(input_shape_spec) is list:
-        number_of_features = sum([int(v.shape[1]) for v in input_shape_spec])
-    elif type(input_shape_spec) is tf.Tensor:
-        number_of_features = int(input_shape_spec.shape[1])
-    else:
-        number_of_features = input_shape_spec
-    if fun_definition is None:
-        W = tf.Variable(
-                tf.random_normal(
-                    [number_of_features + 1,output_shape_spec],mean=0,stddev=1), name="W" + label)
-        def apply_fun(*args):
-            tensor_args = tf.concat(args,axis=1)
-            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
-                           tensor_args], 1)
-            result = tf.matmul(X,W)
-            return result
-        pars = [W]
-    else:
-        def apply_fun(*args):
-            return fun_definition(*args)
-        pars = []
-
-    def fun(*args):
-        crossed_args, list_of_args_in_crossed_args = cross_args(args)
-        result = apply_fun(*list_of_args_in_crossed_args)
-        if crossed_args.doms != []:
-            result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],
-                                                   tf.shape(result)[-1:]],axis=0))
-        else:
-            result = tf.reshape(result, (output_shape_spec,))
-        result.doms = crossed_args.doms
-        return result
-    fun.pars = pars
-    fun.label=label
-    return fun
-
-
 def variable(label,number_of_features_or_feed):
     if type(number_of_features_or_feed) is int:
         result = tf.placeholder(dtype=tf.float32,shape=(None,number_of_features_or_feed),name=label)
@@ -230,22 +186,6 @@ def variable(label,number_of_features_or_feed):
         result = tf.constant(number_of_features_or_feed,name=label)
     result.doms = [label]
     return result
-
-def constant(label,value=None,
-                 min_value=None,
-                 max_value=None):
-    label = "ltn_constant_"+label
-    if value is not None:
-        result = tf.constant(value,name=label)
-    else:
-        result = tf.Variable(tf.random_uniform(
-                shape=(1,len(min_value)),
-                minval=min_value,
-                maxval=max_value,name=label))
-    result.doms = []
-    return result
-
-
 
 def proposition(label,initial_value=None,value=None):
     if value is not None:
@@ -258,99 +198,6 @@ def proposition(label,initial_value=None,value=None):
         result = tf.expand_dims(tf.clip_by_value(tf.Variable(tf.random_normal(shape=(),mean=.5,stddev=.5)),0.,1.),dim=0)
     result.doms = ()
     return result
-
-def predicate(label,number_of_features_or_vars,pred_definition=None):
-    # global BIAS
-    if type(number_of_features_or_vars) is list:
-        number_of_features = sum([int(v.shape[1]) for v in number_of_features_or_vars])
-    elif type(number_of_features_or_vars) is tf.Tensor:
-        number_of_features = int(number_of_features_or_vars.shape[1])
-    else:
-        number_of_features = number_of_features_or_vars
-    if pred_definition is None:
-        W = tf.matrix_band_part(
-            tf.Variable(
-                tf.random_normal(
-                    [LAYERS,
-                     number_of_features + 1,
-                     number_of_features + 1],mean=0,stddev=1), name="W" + label), 0, -1)
-        u = tf.Variable(tf.ones([LAYERS, 1]),
-                        name="u" + label)
-        def apply_pred(*args):
-            app_label = label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
-            tensor_args = tf.concat(args,axis=1)
-            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
-                           tensor_args], 1)
-            XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
-            XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
-            gX = tf.matmul(tf.tanh(XWX), u)
-            result = tf.sigmoid(gX, name=app_label)
-            return result
-        pars = [W,u]
-    else:
-        def apply_pred(*args):
-            return pred_definition(*args)
-        pars = []
-
-    def pred(*args):
-        # global BIAS
-        crossed_args, list_of_args_in_crossed_args = cross_args(args)
-        result = apply_pred(*list_of_args_in_crossed_args)
-        if crossed_args.doms != []:
-            result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],[1]],axis=0))
-        else:
-            result = tf.reshape(result, (1,))
-        result.doms = crossed_args.doms
-        BIAS = get_bias()
-        update_bias(tf.divide(BIAS + .5 - tf.reduce_mean(result),2)*BIAS_factor)
-        return result
-    pred.pars = pars
-    pred.label=label
-    return pred
-
-def cross_args(args):
-    result = args[0]
-    for arg in args[1:]:
-        result,_ = cross_2args(result,arg)
-    result_flat = tf.reshape(result,
-                             (tf.reduce_prod(tf.shape(result)[:-1]),
-                              tf.shape(result)[-1]))
-    result_args = tf.split(result_flat,[tf.shape(arg)[-1] for arg in args],1)
-    return result, result_args
-
-def cross_2args(X,Y):
-    if X.doms == [] and Y.doms == []:
-        result = tf.concat([X,Y],axis=-1)
-        result.doms = []
-        return result,[X,Y]
-    X_Y = set(X.doms) - set(Y.doms)
-    Y_X = set(Y.doms) - set(X.doms)
-    eX = X
-    eX_doms = [x for x in X.doms]
-    for y in Y_X:
-        eX = tf.expand_dims(eX,0)
-        eX_doms.append(y)
-    eY = Y
-    eY_doms = [y for y in Y.doms]
-    for x in X_Y:
-        eY = tf.expand_dims(eY,0)
-        eY_doms.append(x)
-    perm_eY = []
-    for y in eY_doms:
-        perm_eY.append(eX_doms.index(y))
-    eY = tf.transpose(eY,perm_eY + [len(perm_eY)])
-    mult_eX = [1]*(len(eX_doms)+1)
-    mult_eY = [1]*(len(eY_doms)+1)
-    for i in range(len(mult_eX)-1):
-        mult_eX[i] = tf.maximum(1,tf.floor_div(tf.shape(eY)[i],tf.shape(eX)[i]))
-        mult_eY[i] = tf.maximum(1,tf.floor_div(tf.shape(eX)[i],tf.shape(eY)[i]))
-    result1 = tf.tile(eX,mult_eX)
-    result2 = tf.tile(eY,mult_eY)
-    result = tf.concat([result1,result2],axis=-1)
-    result1.doms = eX_doms
-    result2.doms = eX_doms
-    result.doms = eX_doms
-    return result,[result1,result2]
 
 
 def get_bias():

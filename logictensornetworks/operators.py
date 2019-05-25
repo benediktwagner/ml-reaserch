@@ -1,10 +1,19 @@
 import tensorflow as tf
 
-from logictensornetworks import cross_args, F_And, F_Or, cross_2args, F_Implies, F_Not, F_Equiv, F_Forall, F_Exists
+from logictensornetworks.utils import cross_2args, cross_args
 
 DEFAULT_TNORM = "luk"
 DEFAULT_UNIVERSAL_AGG = "hmean"
 DEFAULT_EXISTENTIAL_AGGREGATOR = "max"
+
+F_And = None
+F_Or = None
+F_Implies = None
+F_Equiv = None
+F_Not = None
+F_Forall = None
+F_Exists = None
+
 
 def set_tnorm(tnorm):
     assert tnorm in ['min','luk','prod','mean','']
