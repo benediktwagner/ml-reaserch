@@ -1,0 +1,1 @@
+Folder contains pretrained embeddings to be loaded by examples/ scripts
