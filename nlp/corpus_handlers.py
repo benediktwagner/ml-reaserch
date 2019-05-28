@@ -105,6 +105,7 @@ class SQuADCorpusHandler(BaseCorpusHandler):
     def get_all_paragraphs(self, force_reload=False):
         """
         Method returns a list of all paragraphs in corpus
+        ie. all paragraphs for all topics in a single list
         :param force_reload:
         :return:
         """
@@ -115,7 +116,7 @@ class SQuADCorpusHandler(BaseCorpusHandler):
         """
         Method returns paragraphs from corpus.
         :param idx: paragraph index. If None, return all.
-        :return: list of paragraphs
+        :return: single paragraph
         """
         return self.get_all_paragraphs(force_reload=force_reload)[idx]
 
