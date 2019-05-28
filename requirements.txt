@@ -2,3 +2,7 @@ tensorflow
 jupyter
 matplotlib
 tqdm
+pandas
+gensim
+nltk
+sklearn
