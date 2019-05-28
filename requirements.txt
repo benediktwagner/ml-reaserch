@@ -1,3 +1,4 @@
 tensorflow
 jupyter
 matplotlib
+tqdm
