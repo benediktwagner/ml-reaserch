@@ -176,6 +176,104 @@ class Constant:
         result.doms = []
         return result
 
+def predicate(label,number_of_features_or_vars,pred_definition=None):
+    global BIAS
+    if type(number_of_features_or_vars) is list:
+        number_of_features = sum([int(v.shape[1]) for v in number_of_features_or_vars])
+    elif type(number_of_features_or_vars) is tf.Tensor:
+        number_of_features = int(number_of_features_or_vars.shape[1])
+    else:
+        number_of_features = number_of_features_or_vars
+    if pred_definition is None:
+        W = tf.matrix_band_part(
+            tf.Variable(
+                tf.random_normal(
+                    [LAYERS,
+                     number_of_features + 1,
+                     number_of_features + 1],mean=0,stddev=1), name="W" + label), 0, -1)
+        u = tf.Variable(tf.ones([LAYERS, 1]),
+                        name="u" + label)
+        def apply_pred(*args):
+            app_label = label + "/" + "_".join([arg.name.split(":")[0] for arg in args]) + "/"
+            tensor_args = tf.concat(args,axis=1)
+            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                           tensor_args], 1)
+            XW = tf.matmul(tf.tile(tf.expand_dims(X, 0), [LAYERS, 1, 1]), W)
+            XWX = tf.squeeze(tf.matmul(tf.expand_dims(X, 1), tf.transpose(XW, [1, 2, 0])), axis=[1])
+            gX = tf.matmul(tf.tanh(XWX), u)
+            result = tf.sigmoid(gX, name=app_label)
+            return result
+        pars = [W,u]
+    else:
+        def apply_pred(*args):
+            return pred_definition(*args)
+        pars = []
+
+    def pred(*args):
+        global BIAS
+        crossed_args, list_of_args_in_crossed_args = cross_args(args)
+        result = apply_pred(*list_of_args_in_crossed_args)
+        if crossed_args.doms != []:
+            result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],[1]],axis=0))
+        else:
+            result = tf.reshape(result, (1,))
+        result.doms = crossed_args.doms
+        BIAS = tf.divide(BIAS + .5 - tf.reduce_mean(result),2)*BIAS_factor
+        return result
+    pred.pars = pars
+    pred.label=label
+    return pred
+
+def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
+    if type(input_shape_spec) is list:
+        number_of_features = sum([int(v.shape[1]) for v in input_shape_spec])
+    elif type(input_shape_spec) is tf.Tensor:
+        number_of_features = int(input_shape_spec.shape[1])
+    else:
+        number_of_features = input_shape_spec
+    if fun_definition is None:
+        W = tf.Variable(
+                tf.random_normal(
+                    [number_of_features + 1,output_shape_spec],mean=0,stddev=1), name="W" + label)
+        def apply_fun(*args):
+            tensor_args = tf.concat(args,axis=1)
+            X = tf.concat([tf.ones((tf.shape(tensor_args)[0], 1)),
+                           tensor_args], 1)
+            result = tf.matmul(X,W)
+            return result
+        pars = [W]
+    else:
+        def apply_fun(*args):
+            return fun_definition(*args)
+        pars = []
+
+    def fun(*args):
+        crossed_args, list_of_args_in_crossed_args = cross_args(args)
+        result = apply_fun(*list_of_args_in_crossed_args)
+        if crossed_args.doms != []:
+            result = tf.reshape(result, tf.concat([tf.shape(crossed_args)[:-1],
+                                                   tf.shape(result)[-1:]],axis=0))
+        else:
+            result = tf.reshape(result, (output_shape_spec,))
+        result.doms = crossed_args.doms
+        return result
+    fun.pars = pars
+    fun.label=label
+    return fun
+
+def constant(label,value=None,
+                 min_value=None,
+                 max_value=None):
+    label = "ltn_constant_"+label
+    if value is not None:
+        result = tf.constant(value,name=label)
+    else:
+        result = tf.Variable(tf.random_uniform(
+                shape=(1,len(min_value)),
+                minval=min_value,
+                maxval=max_value,name=label))
+    result.doms = []
+    return result
 
 def variable(label,number_of_features_or_feed):
     if type(number_of_features_or_feed) is int:
