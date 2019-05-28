@@ -1,3 +1,5 @@
+import logictensornetworks.operators
+
 try:
     from pyparsing import (alphanums, alphas, delimitedList, Forward,
             Group, Keyword, Literal, opAssoc, operatorPrecedence,
@@ -95,11 +97,11 @@ def _parse_term(text):
     return result.asList()[0]
 
 
-OPERATORS={"|" : ltn.Or,
-           "&" : ltn.And,
-           "~" : ltn.Not,
-           "->" : ltn.Implies,
-           "%" : ltn.Equiv}
+OPERATORS={"|" : logictensornetworks.operators.Or,
+           "&" : logictensornetworks.operators.And,
+           "~" : logictensornetworks.operators.Not,
+           "->" : logictensornetworks.operators.Implies,
+           "%" : logictensornetworks.operators.Equiv}
 
 
 def _parse_formula(text):
@@ -218,7 +220,7 @@ def _build_formula(formula):
             terms.append(_t)
         return PREDICATES[formula[0]](*terms)
     elif str(formula[0]) == "~":
-        return ltn.Not(_build_formula(formula[1]))
+        return logictensornetworks.operators.Not(_build_formula(formula[1]))
     elif str(formula[0]) == "forall":
         variables=[]
         for t in formula[1:-1]:
@@ -227,7 +229,7 @@ def _build_formula(formula):
             variables.append(VARIABLES[_variable_label(t)])
         variables=tuple(variables)
         wff=_build_formula(formula[-1])
-        return ltn.Forall(variables,wff)
+        return logictensornetworks.operators.Forall(variables, wff)
     elif str(formula[0]) == "exists":
         variables=[]
         for t in formula[1:-1]:
@@ -236,7 +238,7 @@ def _build_formula(formula):
             variables.append(VARIABLES[_variable_label(t)])
         variables=tuple(variables)
         wff=_build_formula(formula[-1])
-        return ltn.Exists(variables,wff)
+        return logictensornetworks.operators.Exists(variables, wff)
     else:
         operator=None
         formulas=[]

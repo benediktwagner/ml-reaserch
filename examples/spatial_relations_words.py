@@ -2,7 +2,7 @@ import tensorflow as tf
 import logictensornetworks as ltn
 import numpy as np
 from numpy.random import choice as random
-from logictensornetworks import Forall,Exists, Equiv, Implies, And, Or, Not
+from logictensornetworks.operators import And, Or, Implies, Not, Equiv, Forall, Exists
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import itertools
@@ -123,9 +123,9 @@ t = ltn.variable("t",tf.cast(actor_data[1:], tf.float32))
 
 # relational predicates
 
-A = ltn.predicate("actor", emb_size*2)
-M = ltn.predicate("movement", emb_size*2)
-L = ltn.predicate("location", emb_size*2)
+A = ltn.Predicate("actor", emb_size*2).ground
+M = ltn.Predicate("movement", emb_size*2).ground
+L = ltn.Predicate("location", emb_size*2).ground
 
 P = [A,M,L]
 
