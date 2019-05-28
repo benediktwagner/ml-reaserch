@@ -177,6 +177,14 @@ class Constant:
         return result
 
 def predicate(label,number_of_features_or_vars,pred_definition=None):
+    """
+    Note: this is the old/official implementation of predicates. This functionality has been refactored into
+    the Predicate class, but this function has been kept for backwards compatibility.
+    :param label:
+    :param number_of_features_or_vars:
+    :param pred_definition:
+    :return:
+    """
     global BIAS
     if type(number_of_features_or_vars) is list:
         number_of_features = sum([int(v.shape[1]) for v in number_of_features_or_vars])
@@ -225,6 +233,15 @@ def predicate(label,number_of_features_or_vars,pred_definition=None):
     return pred
 
 def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
+    """
+    Note: this is the old/official implementation of functions. This functionality has been refactored into
+    the Function class, but this function has been kept for backwards compatibility.
+    :param label:
+    :param input_shape_spec:
+    :param output_shape_spec:
+    :param fun_definition:
+    :return:
+    """
     if type(input_shape_spec) is list:
         number_of_features = sum([int(v.shape[1]) for v in input_shape_spec])
     elif type(input_shape_spec) is tf.Tensor:
@@ -264,6 +281,15 @@ def function(label, input_shape_spec, output_shape_spec=1,fun_definition=None):
 def constant(label,value=None,
                  min_value=None,
                  max_value=None):
+    """
+    Note: this is the old/official implementation of constants. This functionality has been refactored into
+    the Constant class, but this function has been kept for backwards compatibility.
+    :param label:
+    :param value:
+    :param min_value:
+    :param max_value:
+    :return:
+    """
     label = "ltn_constant_"+label
     if value is not None:
         result = tf.constant(value,name=label)
