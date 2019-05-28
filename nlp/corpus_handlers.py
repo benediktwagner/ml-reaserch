@@ -1,7 +1,7 @@
 """ File defines handlers for various text-based corpuses """
 
 import json
-from os.path import join, abspath, dirname
+from os.path import join, abspath, dirname, isfile
 
 from .utils import sent_tokenize
 
@@ -54,11 +54,27 @@ class SQuADCorpusHandler(BaseCorpusHandler):
     def _default_data_path(self):
         return join(data_dir, 'train-v2.0.json')
 
+    @_default_data_path.setter
+    def _default_data_path(self, value):
+        self._default_data_path = value
+
+    def load_data(self, force_reload=True):
+        """
+        Method loads data to the .data attribute
+        :param force_reload:
+        :return:
+        """
+        if (self.data is None) or force_reload:
+            self.data = self.get_data(force_reload=True)
+
     def get_data(self, force_reload=False):
         """
         Method returns all data in corpus
         :return: data (list of dicts)
         """
+        assert isfile(self.data_path), "Attempting to load from file which does not exist: {} \n " \
+                                       "Please either create this file or point the SQuADCorpusHandler.data_path " \
+                                       "attribute to a valid SQuAD json file".format(self.data_path)
         if (self.data is None) or force_reload:
             with open(self.data_path, 'r') as fi:
                 return json.loads(fi.read())['data']
@@ -185,6 +201,26 @@ class SQuADCorpusHandler(BaseCorpusHandler):
             ])
 
         return paragraphs_list
+
+    def cqa_triplets_for_topic(self, topic_idx, **kwargs):
+        topic = self.get_single_topic(idx=topic_idx, **kwargs)
+        contexts, questions, answers = [], [], []
+        for i in range(len(topic)):
+            for j in range(len(topic[i][1])):
+                contexts.append(topic[i][0])
+                questions.append(topic[i][1][j])
+                if not topic[i][4][j]:
+                    answers.append('ERR')
+                else:
+                    ans = topic[i][4][j]
+                    assert type(ans) in [str, list], \
+                        "Unable to handle answer of data type {} (value {})".format(type(ans), ans)
+                    if type(ans) == str:
+                        answers.append(ans)
+                    elif type(ans) == list:
+                        answers.append(ans[0])
+
+        return contexts, questions, answers
 
 
 
