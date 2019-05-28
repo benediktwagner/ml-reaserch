@@ -29,8 +29,8 @@ class SQuADCorpusHandler(BaseCorpusHandler):
     """ Class defines methods for handling SQuAD corpus """
     def __init__(self, data_path=None):
         super().__init__() # run __init__() method of the base class
-        self.data = self.get_data()
-        self.titles = self.get_titles()
+        self.data = None
+        # self.titles = self.get_titles()
 
     @property
     def regex_list(self):
@@ -54,11 +54,28 @@ class SQuADCorpusHandler(BaseCorpusHandler):
     def _default_data_path(self):
         return join(data_dir, 'train-v2.0.json')
 
-    def get_titles(self, data=None):
-        """ Method returns a list of paragraph titles"""
-        if data == None:
-            data = self.data
+    def get_data(self, force_reload=False):
+        """
+        Method returns all data in corpus
+        :return: data (list of dicts)
+        """
+        if (self.data is None) or force_reload:
+            with open(self.data_path, 'r') as fi:
+                return json.loads(fi.read())['data']
+        else:
+            return self.data
 
+    def get_data_item(self, index:int, force_reload=False):
+        """
+        Method returns one item of data from the corpus
+        :param index: index requested
+        :return: data item (dict)
+        """
+        return self.get_data(force_reload=force_reload)[index]
+
+    def get_titles(self, force_reload=False):
+        """ Method returns a list of paragraph titles"""
+        data = self.get_data(force_reload=force_reload)
         return [p['title'] for p in data]
 
     def _get_index_for_title(self, title):
@@ -69,225 +86,106 @@ class SQuADCorpusHandler(BaseCorpusHandler):
         else:
             print('_get_index_for_title not implemented for title type {}'.format(type(title)))
 
-    def get_all_paragraphs(self):
-        return [p['paragraphs'] for p in self.data]
-
-    def get_paragraphs(self, idx=None):
-        if idx is None:
-            return self.get_all_paragraphs()
-        else:
-            return self.get_all_paragraphs()[idx]
-
-    def get_context_for_paragraph(self, index):
-        return [p['paragraphs'] for p in self.get_data()]
-
-    def get_contexts_bkp(self, json_in, sentence_tokenize=False):
+    def get_all_paragraphs(self, force_reload=False):
         """
-        # ------------------------------------
-        # Original Function used for the MVP
-        # ------------------------------------
-        # This was used for first inspections
-        :param json_in:
-        :param sentence_tokenize:
+        Method returns a list of all paragraphs in corpus
+        :param force_reload:
         :return:
         """
-        with open(json_in) as file:
-            contexts_list = []
-            data = json.load(file)
-            for i in range(len(data['data'])):
-                data['data'][i]['title']
+        data = self.get_data(force_reload=force_reload)
+        return [p['paragraphs'] for p in data]
 
-                for j in range(len(data['data'][i]['paragraphs'])):
-                    if sentence_tokenize == True:
-                        contexts_list.append(sent_tokenize(data['data'][i]['paragraphs'][j]['context']))
-                    else:
-                        contexts_list.append(data['data'][i]['paragraphs'][j]['context'])
-            return contexts_list
-
-    def get_squad_topic(self, json_in, i=0, sentence_tokenize=False, word_tokenizer=None, cleaner=None):
+    def get_single_paragraph(self, idx=None, force_reload=False):
         """
-        # ------------------
-        # Read SQuAD Topic
-        # ------------------
-        # This function contains  conditional settings.
-        # It is quite heavy to read. I am sorry for this experirnce.
-        # It partially is because of the original naming convention. It works, but it could be a bit over-engineered. RACE data read has been simplified.
-        # By Convention {i} is an element of the root, a distinct thematic part.
-        # It reads a single SQuAD topic and applies relevanant transformations and returns the content organized in lists.
-        :param json_in:
-        :param i:
-        :param sentence_tokenize:
-        :param word_tokenizer:
-        :param cleaner:
+        Method returns paragraphs from corpus.
+        :param idx: paragraph index. If None, return all.
+        :return: list of paragraphs
+        """
+        return self.get_all_paragraphs(force_reload=force_reload)[idx]
+
+    def get_all_contexts(self, sentence_tokenize=False, force_reload=False):
+        """
+        Method gets all contexts from all paragraphs
+        :param sentence_tokenize: bool: if True, return nested list of tokenised sentences for each context. If false,
+        return list of contexts as single strings.
+        :param force_reload:
         :return:
         """
-        with open(json_in) as file:
-            data = json.load(file)
-            topic = data['data'][i]
-            paragraphs_list = []
-            # print('| SELECTED TOPIC TITLE: {}'.format(topic['title']))
-            # print('| SELECTED TOPIC IDX: {}'.format(i))
-            # print('| ALL TOPICS: {}'.format(len(data['data'])))
+        contexts =  [c['context'] for p in self.get_all_paragraphs(force_reload=force_reload) for c in p]
 
-            for j in range(len(data['data'][i]['paragraphs'])):
-                questions_text = []
-                questions_id = []
-                questions_isimp = []
-                answers_text = []
+        if sentence_tokenize:
+            contexts = [sent_tokenize(c) for c in contexts]
 
-                # --------------------------------------
-                # 1st IF. Tokenize into sentences only
-                # --------------------------------------
-                if (sentence_tokenize == True) & (word_tokenizer == None):
-                    for k in range(len(data['data'][i]['paragraphs'][j]['qas'])):
-                        answers_list = []
-                        if cleaner:
-                            questions_text.append(
-                                cleaner.text_cleaner(data['data'][i]['paragraphs'][j]['qas'][k]['question']))
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
-                        else:
-                            questions_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['question'])
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
+        return contexts
 
-                        if data['data'][i]['paragraphs'][j]['qas'][k]['answers']:
-                            if cleaner:
-                                answers_text.append(
-                                    cleaner.text_cleaner(
-                                        data['data'][i]['paragraphs'][j]['qas'][k]['answers'][0]['text']))
-                            else:
-                                answers_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['answers'][0]['text'])
-                        else:
-                            answers_text.append(('<no_answer>', '<no_pos>'))
-                            # put everything together
-                    if cleaner:
-                        paragraphs_item = [
-                            cleaner.list_cleaner(sent_tokenize(data['data'][i]['paragraphs'][j]['context'])),
-                            questions_text, questions_id, questions_isimp, answers_text]
-                    else:
-                        paragraphs_item = [sent_tokenize(data['data'][i]['paragraphs'][j]['context']),
-                                           questions_text, questions_id, questions_isimp, answers_text]
+    def get_single_topic(self, idx, sentence_tokenize=False, word_tokenizer=None, cleaner=None, force_reload=False):
+        """
+        Method to get a single SQuAD topic, ie many paragraphs on a single topic.
+        Each paragraph contains a number of contexts
+        Each context corresponds to a number of questions
+        :param idx:
+        :param sentence_tokenize: bool
+        :param word_tokenizer: function or class implementing method tokenize()
+        :param cleaner: object of Cleaners class, implementing method text_cleaner
+        :param force_reload: bool: force reload of data
+        :return:
+        """
 
-                # -----------------------------------------------------------------------------
-                # 2nd IF. Tokenize into sentences into tokens using provided tokenizer object
-                # -----------------------------------------------------------------------------
-                elif (sentence_tokenize == True) & (word_tokenizer is not None):
-                    for k in range(len(data['data'][i]['paragraphs'][j]['qas'])):
-                        answers_list = []
-                        if cleaner:
-                            questions_text.append(word_tokenizer.nltk_regex(
-                                cleaner.text_cleaner(data['data'][i]['paragraphs'][j]['qas'][k]['question'])))
-                            # print(questions_text)
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
-                        else:
-                            questions_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['question'])
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
+        paragraphs_list = []
 
-                        if data['data'][i]['paragraphs'][j]['qas'][k]['answers']:
-                            if cleaner:
-                                answers_text.append(word_tokenizer.nltk_regex(
-                                    cleaner.text_cleaner(
-                                        data['data'][i]['paragraphs'][j]['qas'][k]['answers'][0]['text'])))
-                            else:
-                                answers_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['answers'][0]['text'])
-                        else:
-                            answers_text.append(('<no_answer>', '<no_pos>'))
+        for p in self.get_single_paragraph(idx=idx, force_reload=force_reload):
+            questions_text = []
+            questions_id = []
+            questions_isimp = []
+            answers_text = []
 
-                    if cleaner:
-                        paragraphs_item = [word_tokenizer.nltk_regex_list(
-                            cleaner.list_cleaner(sent_tokenize(data['data'][i]['paragraphs'][j]['context']))),
-                            questions_text, questions_id, questions_isimp, answers_text]
-                    else:
-                        paragraphs_item = [
-                            word_tokenizer.nltk_regex_list(sent_tokenize(data['data'][i]['paragraphs'][j]['context'])),
-                            questions_text, questions_id, questions_isimp, answers_text]
-                # -----------------------------------------------------------------------------------------
-                # 3rd IF. Do not tokenize sentences. Tokenize into tokens using provided tokenizer object
-                # -----------------------------------------------------------------------------------------
-                elif (sentence_tokenize == False) & (word_tokenizer is not None):
-                    for k in range(len(data['data'][i]['paragraphs'][j]['qas'])):
-                        answers_list = []
-                        if cleaner:
-                            questions_text.append(word_tokenizer.nltk_regex(
-                                cleaner.text_cleaner(data['data'][i]['paragraphs'][j]['qas'][k]['question'])))
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
-                        else:
-                            questions_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['question'])
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
+            # Extract raw data
+            for q in p['qas']:
+                questions_text.append(q['question'])
+                questions_id.append(q['id'])
+                questions_isimp.append(q['is_impossible'])
 
-                        if not data['data'][i]['paragraphs'][j]['qas'][k]['answers']:
-                            answers_text.append([('<no_answer>', '<no_pos>')])
-                        else:
-                            if cleaner:
-                                answers_text.append(word_tokenizer.nltk_regex(
-                                    cleaner.text_cleaner(
-                                        data['data'][i]['paragraphs'][j]['qas'][k]['answers'][0]['text'])))
-                            else:
-                                answers_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['answers'][0]['text'])
-
-                    if cleaner:
-                        paragraphs_item = [
-                            word_tokenizer.nltk_regex(
-                                cleaner.text_cleaner((data['data'][i]['paragraphs'][j]['context']))),
-                            questions_text, questions_id, questions_isimp, answers_text]
-                    else:
-                        paragraphs_item = [word_tokenizer.nltk_regex((data['data'][i]['paragraphs'][j]['context'])),
-                                           questions_text, questions_id, questions_isimp, answers_text]
-
-                # -----------------------------------
-                # 4th ELSE. Don't tokenize anything
-                # -----------------------------------
+                if q['answers']:
+                    # if answer exists, append it: else add <no_answer> tag
+                    answers_text.append(q['answers'][0]['text'])
                 else:
-                    for k in range(len(data['data'][i]['paragraphs'][j]['qas'])):
-                        answers_list = []
-                        if cleaner:
-                            questions_text.append(
-                                cleaner.text_cleaner(data['data'][i]['paragraphs'][j]['qas'][k]['question']))
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
-                        else:
-                            questions_text.append(data['data'][i]['paragraphs'][j]['qas'][k]['question'])
-                            questions_id.append(data['data'][i]['paragraphs'][j]['qas'][k]['id'])
-                            questions_isimp.append(data['data'][i]['paragraphs'][j]['qas'][k]['is_impossible'])
+                    answers_text.append(('<no_answer>', '<no_pos>'))
 
-                        for l in range(len(data['data'][i]['paragraphs'][j]['qas'][k]['answers'])):
-                            if cleaner:
-                                answers_list.append(cleaner.text_cleaner(
-                                    data['data'][i]['paragraphs'][j]['qas'][k]['answers'][l]['text'][0]))
-                            else:
-                                answers_list.append(data['data'][i]['paragraphs'][j]['qas'][k]['answers'][l]['text'][0])
+            context = p['context'] # start with raw text
+            # If cleaner specified, apply cleaner to raw text strings: string -> string
+            if cleaner:
+                assert hasattr(cleaner, 'text_cleaner'), "Cleaner object must implement method text_cleaner, str -> str"
+                questions_text = [cleaner.text_cleaner(q) for q in questions_text]
+                answers_text = [cleaner.text_cleaner(q) for q in answers_text]
+                context = cleaner.text_cleaner(context)
 
-                        answers_text.append(('<no_answer>', '<no_pos>'))
+            # If sentence tokenization specified, apply to text strings: string -> list
+            if sentence_tokenize:
+                context = sent_tokenize(context)
+            else:
+                context = [context] # even if not tokenising sentences, wrap in a list to simplify downstream processing
 
-                    if cleaner:
-                        paragraphs_item = [cleaner.text_cleaner(data['data'][i]['paragraphs'][j]['context']),
-                                           questions_text, questions_id, question_isimp, answers_text]
-                    else:
-                        paragraphs_item = [data['data'][i]['paragraphs'][j]['context'],
-                                           questions_text, questions_id, question_isimp, answers_text]
-                paragraphs_list.append(paragraphs_item)
-        return paragraphs_list, topic['title']
+            # If word tokenizer specified, apply to list of sentences: list -> nested list
+            if word_tokenizer:
+                # Allow a tokenizer which is either a function acting on an input string to return a list of strings,
+                # or a class with a method tokenize() which does the same
+                if not callable(word_tokenizer):
+                    assert hasattr(word_tokenizer,'tokenize'), "word tokenizer {} must be callable, or have method .tokenize(), str -> list"
+                    word_tokenize_fun = word_tokenizer.tokenize
+                else:
+                    word_tokenize_fun = word_tokenizer
 
-    def get_data(self):
-        """
-        Method returns all data in corpus
-        :return: data (list of dicts)
-        """
-        with open(self.data_path, 'r') as fi:
-            return json.loads(fi.read())['data']
+                questions_text = [word_tokenize_fun(q) for q in questions_text]
+                answers_text = [word_tokenize_fun(q) for q in answers_text]
+                context = [word_tokenize_fun(cs) for cs in context] # expecting a sentence-tokenised representation here
 
-    def get_data_item(self, index:int):
-        """
-        Method returns one item of data from the corpus
-        :param index: index requested
-        :return: data item (dict)
-        """
-        return self.get_data()[index]
+            # Append postprocessed paragraph data to results list
+            paragraphs_list.append([
+                context, questions_text, questions_id, questions_isimp, answers_text
+            ])
+
+        return paragraphs_list
+
 
 
 class RaceCorpusHandler(BaseCorpusHandler):
