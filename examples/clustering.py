@@ -1,10 +1,23 @@
+import random
+
+import logictensornetworks.operators
+
+random.seed(1337)
+
+import numpy as np
+np.random.seed(1337)  # for reproducibility
+
+import tensorflow as tf
+tf.set_random_seed(1)
+
+
 import logictensornetworks as ltn
-ltn.set_universal_aggreg("min")
-ltn.set_existential_aggregator("max")
-ltn.set_tnorm("prod")
+logictensornetworks.operators.set_universal_aggreg("min")
+logictensornetworks.operators.set_existential_aggregator("max")
+logictensornetworks.operators.set_tnorm("prod")
 ltn.LAYERS = 4
 
-from logictensornetworks import And,Not,Or,Forall,Exists,Implies,Equiv
+from logictensornetworks.operators import And, Or, Implies, Not, Equiv, Forall, Exists
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -67,10 +80,10 @@ closed_x_y = ltn.variable("closed_x_y",closed_data)
 distant_x_y = ltn.variable("distant_x_y",distant_data)
 
 
-C = {i:ltn.predicate("C_"+str(i),x) for i in clst_ids}
+C = {i:ltn.Predicate("C_"+str(i),x).ground for i in clst_ids}
 
-first = ltn.function("first",closed_x_y,fun_definition=lambda d:d[:,:2])
-second = ltn.function("second",closed_x_y,fun_definition=lambda d:d[:,2:])
+first = ltn.Function("first",closed_x_y,fun_definition=lambda d:d[:,:2]).ground
+second = ltn.Function("second",closed_x_y,fun_definition=lambda d:d[:,2:]).ground
 
 print("defining the theory T")
 T = tf.reduce_mean(tf.concat(
